@@ -10,11 +10,11 @@ function InputForm({ url, setUrl, setSummary }) {
     setError('');
     setSummary('');
     try {
-      // For now, just send the URL as text. You can later fetch and extract article content.
-      const response = await fetch('http://localhost:3001/api/summarize', {
+      // Use the Vercel API endpoint
+      const response = await fetch('/api/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: url }),
+        body: JSON.stringify({ url: url }),
       });
       const data = await response.json();
       if (response.ok) {
