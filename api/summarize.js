@@ -2,10 +2,6 @@ import OpenAI from 'openai';
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -23,16 +19,46 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Check if API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OpenAI API key not found in environment variables');
+      return res.status(500).json({ error: 'OpenAI API key not configured' });
+    }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    // Validate request body
+    if (!req.body) {
+      console.error('No request body received');
+      return res.status(400).json({ error: 'Request body is required' });
+    }
+
     const { url } = req.body;
     
     if (!url) {
+      console.error('URL not provided in request body');
       return res.status(400).json({ error: 'URL is required' });
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch (error) {
+      console.error('Invalid URL format:', url);
+      return res.status(400).json({ error: 'Invalid URL format' });
     }
 
     console.log('Fetching content from:', url);
     
     // Fetch the webpage content
     const response = await fetch(url);
+    if (!response.ok) {
+      console.error('Failed to fetch URL:', response.status, response.statusText);
+      return res.status(400).json({ error: `Failed to fetch URL: ${response.status}` });
+    }
+    
     const html = await response.text();
     
     // Parse HTML and extract text content
@@ -72,6 +98,7 @@ export default async function handler(req, res) {
     content = content.replace(/\s+/g, ' ').substring(0, 4000);
     
     if (!content) {
+      console.error('No content extracted from URL');
       return res.status(400).json({ error: 'Could not extract content from the URL' });
     }
 
@@ -100,7 +127,7 @@ export default async function handler(req, res) {
     res.status(200).json({ summary });
     
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in API function:', error);
     res.status(500).json({ 
       error: 'Failed to generate summary',
       details: error.message 
